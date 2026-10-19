@@ -800,7 +800,7 @@ client.on(
 );
 
 /* =======================================================
-   MESSAGE DELETE
+   MESSAGE DELETE (Corrigido para Webhooks)
 ======================================================= */
 
 client.on(
@@ -821,7 +821,7 @@ client.on(
             for (
                 const [
                     targetChannelId,
-                    translatedMessageId
+                    translatedMessageIds
                 ]
                 of Object.entries(
                     translations
@@ -839,16 +839,23 @@ client.on(
                         !targetChannel
                     ) continue;
 
-                    const targetMessage =
-                        await targetChannel.messages.fetch(
-                            translatedMessageId
-                        );
+                    // Como pode ser um array de IDs (caso a mensagem seja longa e dividida em partes)
+                    const idsToDelete = Array.isArray(translatedMessageIds) 
+                        ? translatedMessageIds 
+                        : [translatedMessageIds];
 
-                    if (
-                        targetMessage
-                    ) {
+                    // Busca o webhook do canal para deletar a mensagem corretamente
+                    const webhook = await getWebhook(targetChannel);
 
-                        await targetMessage.delete();
+                    if (webhook) {
+                        for (const msgId of idsToDelete) {
+                            try {
+                                await webhook.deleteMessage(msgId);
+                                await wait(250);
+                            } catch (err) {
+                                console.log('[WEBHOOK DELETE FAIL]', err.message);
+                            }
+                        }
                     }
 
                 } catch (err) {
