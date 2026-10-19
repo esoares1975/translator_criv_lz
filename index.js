@@ -707,15 +707,12 @@ client.on(
 );
 
 /* =======================================================
-   MESSAGE UPDATE
+   MESSAGE UPDATE (Corrigido para Webhooks)
 ======================================================= */
 
 client.on(
     'messageUpdate',
-    async (
-        oldMessage,
-        newMessage
-    ) => {
+    async (oldMessage, newMessage) => {
 
         try {
 
@@ -735,7 +732,7 @@ client.on(
             for (
                 const [
                     targetChannelId,
-                    translatedMessageId
+                    translatedMessageIds
                 ]
                 of Object.entries(
                     translations
@@ -753,30 +750,31 @@ client.on(
                         !targetChannel
                     ) continue;
 
+                    const targetLang = CHANNELS[targetChannelId];
+
+                    if (!targetLang) continue;
+
                     const translatedText =
                         await translateText(
                             newMessage.content,
-                            CHANNELS[
-                                targetChannelId
-                            ]
+                            targetLang
                         );
 
-                    const targetMessage =
-                        await targetChannel.messages.fetch(
-                            translatedMessageId
-                        );
+                    // Garante que lidamos com array ou ID único
+                    const idsToEdit = Array.isArray(translatedMessageIds)
+                        ? translatedMessageIds
+                        : [translatedMessageIds];
 
-                    if (
-                        !targetMessage
-                    ) continue;
+                    // Busca o webhook para editar a mensagem enviada anteriormente
+                    const webhook = await getWebhook(targetChannel);
 
-                    await targetMessage.edit({
-
-                        content:
-                            translatedText || ' '
-                    });
-
-                    await wait(500);
+                    if (webhook && idsToEdit.length > 0) {
+                        // Edita a primeira parte da mensagem traduzida
+                        await webhook.editMessage(idsToEdit[0], {
+                            content: translatedText || ' '
+                        });
+                        await wait(500);
+                    }
 
                 } catch (err) {
 
