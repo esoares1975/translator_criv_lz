@@ -295,27 +295,47 @@ client.once('clientReady', () => {
 });
 
 /* =======================================================
-   MESSAGE CREATE (Com suporte a Encaminhadas)
+   MESSAGE CREATE (Com suporte a Encaminhadas / Snapshots)
 ======================================================= */
 
 client.on('messageCreate', async (message) => {
     try {
-        // Ignora bots, mas PERMITE mensagens encaminhadas (que podem não vir com webhookId direto)
         if (message.author.bot && !message.flags?.has('IsCrossposted'))
             return;
 
-        // Se o canal não está na lista de monitorados, ignora
         if (!CHANNELS[message.channel.id])
             return;
 
-        // Extrai texto da mensagem ou de embeds (caso seja mensagem encaminhada de outro bot/servidor)
+        // 1. Tenta pegar o conteúdo normal ou de embeds
         let contentToTranslate = message.content || '';
         if (!contentToTranslate && message.embeds.length > 0) {
-            // Puxa o texto de description ou title do embed encaminhado
             contentToTranslate = message.embeds[0].description || message.embeds[0].title || '';
         }
 
-        if (!contentToTranslate && message.attachments.size === 0)
+        // 2. Se for uma mensagem encaminhada nativa, o conteúdo está dentro de messageSnapshots
+        if (!contentToTranslate && message.messageSnapshots && message.messageSnapshots.size > 0) {
+            const snapshot = message.messageSnapshots.first();
+            contentToTranslate = snapshot.content || '';
+            if (!contentToTranslate && snapshot.embeds && snapshot.embeds.length > 0) {
+                contentToTranslate = snapshot.embeds[0].description || snapshot.embeds[0].title || '';
+            }
+        }
+
+        // Extrai anexos normais e também os de mensagens encaminhadas se existirem
+        const files = [];
+        for (const attachment of message.attachments.values()) {
+            files.push(attachment.url);
+        }
+        if (message.messageSnapshots && message.messageSnapshots.size > 0) {
+            const snapshot = message.messageSnapshots.first();
+            if (snapshot.attachments) {
+                for (const attachment of snapshot.attachments.values()) {
+                    files.push(attachment.url);
+                }
+            }
+        }
+
+        if (!contentToTranslate && files.length === 0)
             return;
 
         console.log(`[MSG] ${message.author.username}`);
@@ -346,13 +366,8 @@ client.on('messageCreate', async (message) => {
                     continue;
                 }
 
-                const files = [];
-                for (const attachment of message.attachments.values()) {
-                    files.push(attachment.url);
-                }
-
                 const sentMessages = await sendLongMessage(webhook, {
-                    content: translatedText || ' ',
+                    content: (translatedText || ' ') + (message.messageSnapshots?.size > 0 ? '\n\n*↪ [Mensagem Encaminhada]*' : ''),
                     username: message.member?.displayName || message.author.username,
                     avatarURL: message.author.displayAvatarURL(),
                     files,
