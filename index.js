@@ -295,12 +295,13 @@ client.once('clientReady', () => {
 });
 
 /* =======================================================
-   MESSAGE CREATE (Com suporte a Encaminhadas / Snapshots)
+   MESSAGE CREATE (Corrigido)
 ======================================================= */
 
 client.on('messageCreate', async (message) => {
     try {
-        if (message.author.bot && !message.flags?.has('IsCrossposted'))
+        // Se for um bot e NÃO for uma mensagem de anúncio/sistema, ignora
+        if (message.author.bot && !message.system)
             return;
 
         if (!CHANNELS[message.channel.id])
