@@ -36,10 +36,7 @@ const PORT = process.env.PORT || 8080;
 
 const CHANNELS =
     JSON.parse(
-        fs.readFileSync(
-            './channels.json',
-            'utf8'
-        )
+        const channels = require('./channels.json');
     );
 
 console.log('========================');
