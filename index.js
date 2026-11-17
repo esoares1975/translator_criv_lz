@@ -1,6 +1,4 @@
 require('dotenv').config();
-const express = require('express');
-const channels = require('./channels.json');
 
 process.on('unhandledRejection', console.error);
 process.on('uncaughtException', console.error);
@@ -36,9 +34,13 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 8080;
 
-const config = {
-    data: channels // ✅ Funciona perfeitamente
-};
+const CHANNELS =
+    JSON.parse(
+        fs.readFileSync(
+            './channels.json',
+            'utf8'
+        )
+    );
 
 console.log('========================');
 console.log('CHANNELS CARREGADOS');
